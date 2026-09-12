@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ServerSidebar } from "@/components/server/ServerSidebar";
 import { ChannelSidebar } from "@/components/server/ChannelSidebar";
 import { ChatArea } from "@/components/server/ChatArea";
 import { MemberList } from "@/components/server/MemberList";
 import { ToastContainer, type Toast } from "@/components/ui/Toast";
+import { getSocket } from "@/lib/socket";
 
 export type Channel = {
   id: string;
@@ -236,7 +237,12 @@ export default function AppPage() {
   const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [remoteTyping, setRemoteTyping] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<ReplyRef | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+
+  const activeChannelIdRef = useRef(activeChannelId);
+  activeChannelIdRef.current = activeChannelId;
 
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
   const activeChannel =
@@ -252,6 +258,121 @@ export default function AppPage() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3200);
   }, []);
+
+  // Socket.io setup
+  useEffect(() => {
+    const socket = getSocket();
+
+    const onConnect = () => {
+      setSocketConnected(true);
+      socket.emit("join-channel", activeChannelIdRef.current);
+    };
+
+    const onDisconnect = () => setSocketConnected(false);
+
+    const onNewMessage = (message: Message) => {
+      // Сообщения от других клиентов
+      const msg = { ...message, isOwn: false };
+      setMessagesByChannel((prev) => ({
+        ...prev,
+        [activeChannelIdRef.current]: [
+          ...(prev[activeChannelIdRef.current] || []),
+          msg,
+        ],
+      }));
+    };
+
+    const onReactionUpdated = (data: { messageId: string; reactions: Reaction[] }) => {
+      setMessagesByChannel((prev) => {
+        const channelMessages = prev[activeChannelIdRef.current] || [];
+        return {
+          ...prev,
+          [activeChannelIdRef.current]: channelMessages.map((msg) =>
+            msg.id === data.messageId ? { ...msg, reactions: data.reactions } : msg
+          ),
+        };
+      });
+    };
+
+    const onUserTyping = (data: { isTyping: boolean; user: string }) => {
+      if (data.isTyping) {
+        setRemoteTyping(data.user);
+      } else {
+        setRemoteTyping(null);
+      }
+    };
+
+    const onMessageEdited = (data: { messageId: string; content: string }) => {
+      setMessagesByChannel((prev) => {
+        const channelMessages = prev[activeChannelIdRef.current] || [];
+        return {
+          ...prev,
+          [activeChannelIdRef.current]: channelMessages.map((msg) =>
+            msg.id === data.messageId
+              ? { ...msg, content: data.content, edited: true }
+              : msg
+          ),
+        };
+      });
+    };
+
+    const onMessageDeleted = (data: { messageId: string }) => {
+      setMessagesByChannel((prev) => {
+        const channelMessages = prev[activeChannelIdRef.current] || [];
+        return {
+          ...prev,
+          [activeChannelIdRef.current]: channelMessages.filter(
+            (msg) => msg.id !== data.messageId
+          ),
+        };
+      });
+    };
+
+    const onPinUpdated = (data: { messageId: string; pinned: boolean }) => {
+      setMessagesByChannel((prev) => {
+        const channelMessages = prev[activeChannelIdRef.current] || [];
+        return {
+          ...prev,
+          [activeChannelIdRef.current]: channelMessages.map((msg) =>
+            msg.id === data.messageId ? { ...msg, pinned: data.pinned } : msg
+          ),
+        };
+      });
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("new-message", onNewMessage);
+    socket.on("reaction-updated", onReactionUpdated);
+    socket.on("user-typing", onUserTyping);
+    socket.on("message-edited", onMessageEdited);
+    socket.on("message-deleted", onMessageDeleted);
+    socket.on("pin-updated", onPinUpdated);
+
+    if (socket.connected) {
+      onConnect();
+    }
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("new-message", onNewMessage);
+      socket.off("reaction-updated", onReactionUpdated);
+      socket.off("user-typing", onUserTyping);
+      socket.off("message-edited", onMessageEdited);
+      socket.off("message-deleted", onMessageDeleted);
+      socket.off("pin-updated", onPinUpdated);
+    };
+  }, []);
+
+  // При смене канала — присоединяемся к новой комнате
+  useEffect(() => {
+    const socket = getSocket();
+    if (socket.connected) {
+      socket.emit("join-channel", activeChannelId);
+    }
+    setRemoteTyping(null);
+  }, [activeChannelId]);
 
   const handleSelectServer = (serverId: string) => {
     if (serverId === activeServerId) return;
@@ -275,7 +396,7 @@ export default function AppPage() {
     if (!content.trim()) return;
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
       author: "Добрый Дракон",
       avatar: "🐉",
       time: "Сейчас",
@@ -287,10 +408,18 @@ export default function AppPage() {
       replyTo: replyingTo || undefined,
     };
 
+    // Локально добавляем
     setMessagesByChannel((prev) => ({
       ...prev,
       [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
     }));
+
+    // Отправляем другим
+    const socket = getSocket();
+    socket.emit("send-message", {
+      channelId: activeChannelId,
+      message: { ...newMessage, isOwn: false }, // у других isOwn будет false
+    });
 
     setIsTyping(false);
     setReplyingTo(null);
@@ -309,6 +438,14 @@ export default function AppPage() {
         ),
       };
     });
+
+    const socket = getSocket();
+    socket.emit("edit-message", {
+      channelId: activeChannelId,
+      messageId,
+      content: newContent,
+    });
+
     addToast("Сообщение изменено", "success");
   };
 
@@ -322,29 +459,46 @@ export default function AppPage() {
         ),
       };
     });
+
+    const socket = getSocket();
+    socket.emit("delete-message", {
+      channelId: activeChannelId,
+      messageId,
+    });
+
     addToast("Сообщение удалено", "info");
   };
 
   const handleTogglePin = (messageId: string) => {
+    let newPinned = false;
+
     setMessagesByChannel((prev) => {
       const channelMessages = prev[activeChannelId] || [];
       return {
         ...prev,
-        [activeChannelId]: channelMessages.map((msg) =>
-          msg.id === messageId ? { ...msg, pinned: !msg.pinned } : msg
-        ),
+        [activeChannelId]: channelMessages.map((msg) => {
+          if (msg.id === messageId) {
+            newPinned = !msg.pinned;
+            return { ...msg, pinned: newPinned };
+          }
+          return msg;
+        }),
       };
     });
 
-    const msg = messages.find((m) => m.id === messageId);
-    if (msg?.pinned) {
-      addToast("Сообщение откреплено", "info");
-    } else {
-      addToast("Сообщение закреплено", "success");
-    }
+    const socket = getSocket();
+    socket.emit("toggle-pin", {
+      channelId: activeChannelId,
+      messageId,
+      pinned: newPinned,
+    });
+
+    addToast(newPinned ? "Сообщение закреплено" : "Сообщение откреплено", newPinned ? "success" : "info");
   };
 
   const handleToggleReaction = (messageId: string, emoji: string) => {
+    let updatedReactions: Reaction[] = [];
+
     setMessagesByChannel((prev) => {
       const channelMessages = prev[activeChannelId] || [];
       const updated = channelMessages.map((msg) => {
@@ -358,10 +512,8 @@ export default function AppPage() {
             existing.count -= 1;
             existing.reacted = false;
             if (existing.count <= 0) {
-              return {
-                ...msg,
-                reactions: reactions.filter((r) => r.emoji !== emoji),
-              };
+              updatedReactions = reactions.filter((r) => r.emoji !== emoji);
+              return { ...msg, reactions: updatedReactions };
             }
           } else {
             existing.count += 1;
@@ -371,15 +523,30 @@ export default function AppPage() {
           reactions.push({ emoji, count: 1, reacted: true });
         }
 
+        updatedReactions = reactions;
         return { ...msg, reactions };
       });
 
       return { ...prev, [activeChannelId]: updated };
     });
+
+    const socket = getSocket();
+    socket.emit("toggle-reaction", {
+      channelId: activeChannelId,
+      messageId,
+      emoji,
+      reactions: updatedReactions,
+    });
   };
 
   const handleTyping = (typing: boolean) => {
     setIsTyping(typing);
+    const socket = getSocket();
+    socket.emit("typing", {
+      channelId: activeChannelId,
+      isTyping: typing,
+      user: "Добрый Дракон",
+    });
   };
 
   const handleStartReply = (msg: Message) => {
@@ -414,8 +581,10 @@ export default function AppPage() {
           channel={activeChannel}
           messages={messages}
           pinnedMessages={pinnedMessages}
-          isTyping={isTyping}
+          isTyping={isTyping || !!remoteTyping}
+          typingUser={remoteTyping}
           replyingTo={replyingTo}
+          socketConnected={socketConnected}
           onSendMessage={handleSendMessage}
           onToggleReaction={handleToggleReaction}
           onEditMessage={handleEditMessage}
