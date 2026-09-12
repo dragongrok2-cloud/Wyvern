@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "@/components/providers/SessionProvider";
 
 export const metadata: Metadata = {
   title: "Wyvern — Драконий Discord",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className="antialiased min-h-screen bg-scale-900 text-white">
-        {children}
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );
