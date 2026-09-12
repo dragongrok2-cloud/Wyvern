@@ -21,10 +21,19 @@ type Props = {
   channel: Channel;
   messages: Message[];
   onSendMessage: (content: string) => void;
+  onToggleReaction: (messageId: string, emoji: string) => void;
 };
 
-export function ChatArea({ channel, messages, onSendMessage }: Props) {
+const QUICK_EMOJIS = ["🔥", "🐉", "❤️", "✨", "😂", "👍"];
+
+export function ChatArea({
+  channel,
+  messages,
+  onSendMessage,
+  onToggleReaction,
+}: Props) {
   const [input, setInput] = useState("");
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,7 +111,6 @@ export function ChatArea({ channel, messages, onSendMessage }: Props) {
           </div>
         ) : (
           <>
-            {/* Приветствие канала */}
             <div className="flex flex-col items-center justify-center py-8 text-center mb-6">
               <div className="w-16 h-16 rounded-full bg-wyvern-600/20 flex items-center justify-center text-3xl mb-4">
                 #
@@ -120,12 +128,12 @@ export function ChatArea({ channel, messages, onSendMessage }: Props) {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className="flex gap-4 hover:bg-scale-800/40 px-2 py-1 rounded group"
+                  className="flex gap-4 hover:bg-scale-800/40 px-2 py-1.5 rounded group relative"
                 >
                   <div className="w-10 h-10 rounded-full bg-scale-700 flex items-center justify-center text-lg flex-shrink-0 mt-0.5">
                     {msg.avatar}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
                       <span className={`font-medium ${msg.color}`}>
                         {msg.author}
@@ -133,6 +141,57 @@ export function ChatArea({ channel, messages, onSendMessage }: Props) {
                       <span className="text-xs text-zinc-500">{msg.time}</span>
                     </div>
                     <p className="text-zinc-200 leading-relaxed">{msg.content}</p>
+
+                    {/* Reactions */}
+                    {(msg.reactions && msg.reactions.length > 0) || true ? (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {msg.reactions?.map((r) => (
+                          <button
+                            key={r.emoji}
+                            onClick={() => onToggleReaction(msg.id, r.emoji)}
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs transition-colors ${
+                              r.reacted
+                                ? "bg-wyvern-500/20 border border-wyvern-500/40 text-wyvern-300"
+                                : "bg-scale-700/80 border border-transparent hover:border-zinc-600 text-zinc-300"
+                            }`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span className="font-medium">{r.count}</span>
+                          </button>
+                        ))}
+
+                        {/* Add reaction button */}
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setShowReactionPicker(
+                                showReactionPicker === msg.id ? null : msg.id
+                              )
+                            }
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-scale-700 text-zinc-400 hover:text-zinc-200 transition-all"
+                          >
+                            <Smile className="w-4 h-4" />
+                          </button>
+
+                          {showReactionPicker === msg.id && (
+                            <div className="absolute bottom-full left-0 mb-1 flex gap-1 p-1.5 bg-scale-800 border border-zinc-700 rounded-xl shadow-xl z-20">
+                              {QUICK_EMOJIS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => {
+                                    onToggleReaction(msg.id, emoji);
+                                    setShowReactionPicker(null);
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center text-lg hover:bg-scale-700 rounded-lg transition-colors"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -142,7 +201,7 @@ export function ChatArea({ channel, messages, onSendMessage }: Props) {
         )}
       </div>
 
-      {/* Поле ввода (только для текстовых каналов) */}
+      {/* Поле ввода */}
       {!isVoice && (
         <div className="px-4 pb-4 pt-2">
           <form onSubmit={handleSubmit}>
@@ -162,22 +221,13 @@ export function ChatArea({ channel, messages, onSendMessage }: Props) {
                 autoComplete="off"
               />
               <div className="flex items-center gap-2 text-zinc-400">
-                <button
-                  type="button"
-                  className="hover:text-zinc-200 transition-colors"
-                >
+                <button type="button" className="hover:text-zinc-200 transition-colors">
                   <Gift className="w-5 h-5" />
                 </button>
-                <button
-                  type="button"
-                  className="hover:text-zinc-200 transition-colors"
-                >
+                <button type="button" className="hover:text-zinc-200 transition-colors">
                   <Sticker className="w-5 h-5" />
                 </button>
-                <button
-                  type="button"
-                  className="hover:text-zinc-200 transition-colors"
-                >
+                <button type="button" className="hover:text-zinc-200 transition-colors">
                   <Smile className="w-5 h-5" />
                 </button>
               </div>
