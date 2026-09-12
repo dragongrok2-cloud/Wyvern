@@ -17,7 +17,7 @@ export type Channel = {
 export type Reaction = {
   emoji: string;
   count: number;
-  reacted: boolean; // did current user react
+  reacted: boolean;
 };
 
 export type Message = {
@@ -26,8 +26,11 @@ export type Message = {
   avatar: string;
   time: string;
   content: string;
-  color: string;
+  color: string; // role color
+  role?: string;
   reactions?: Reaction[];
+  isOwn?: boolean;
+  edited?: boolean;
 };
 
 export type Server = {
@@ -36,6 +39,15 @@ export type Server = {
   initial: string;
   color: string;
   channels: Channel[];
+};
+
+export type Member = {
+  name: string;
+  avatar: string;
+  role: string;
+  roleColor: string;
+  status: string;
+  online: boolean;
 };
 
 const servers: Server[] = [
@@ -90,6 +102,15 @@ const servers: Server[] = [
   },
 ];
 
+const members: Member[] = [
+  { name: "Добрый Дракон", avatar: "🐉", role: "Хранитель Пламени", roleColor: "text-wyvern-400", status: "Строит Wyvern", online: true },
+  { name: "Огненная Чешуя", avatar: "🔥", role: "Крылатый Разведчик", roleColor: "text-orange-400", status: "В голосовом", online: true },
+  { name: "Ночной Страж", avatar: "🌙", role: "Древний Мудрец", roleColor: "text-indigo-400", status: "Онлайн", online: true },
+  { name: "Кодекс Чешуи", avatar: "📜", role: "Хранитель Знаний", roleColor: "text-emerald-400", status: "Пишет правила", online: true },
+  { name: "Древний Мудрец", avatar: "🧙", role: "Древний Мудрец", roleColor: "text-purple-400", status: "", online: false },
+  { name: "Крылатый Разведчик", avatar: "🦅", role: "Крылатый Разведчик", roleColor: "text-sky-400", status: "", online: false },
+];
+
 const initialMessages: Record<string, Message[]> = {
   "3": [
     {
@@ -99,6 +120,8 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня в 12:05",
       content: "Приветствую всех в Главном Логове! Сегодня мы начинаем строить настоящий драконий Discord.",
       color: "text-wyvern-400",
+      role: "Хранитель Пламени",
+      isOwn: true,
       reactions: [
         { emoji: "🔥", count: 3, reacted: false },
         { emoji: "🐉", count: 2, reacted: true },
@@ -111,6 +134,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня в 12:07",
       content: "Наконец-то! Я ждал этого момента. Интерфейс уже выглядит очень уютно.",
       color: "text-orange-400",
+      role: "Крылатый Разведчик",
       reactions: [{ emoji: "❤️", count: 1, reacted: false }],
     },
     {
@@ -120,6 +144,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня в 12:08",
       content: "Голосовые каналы будут с настоящим эхом пещер? 😏",
       color: "text-indigo-400",
+      role: "Древний Мудрец",
     },
     {
       id: "4",
@@ -128,6 +153,8 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня в 12:10",
       content: "Обязательно. И роли с названиями вроде \"Хранитель Пламени\", \"Крылатый Разведчик\" и \"Древний Мудрец\".",
       color: "text-wyvern-400",
+      role: "Хранитель Пламени",
+      isOwn: true,
       reactions: [{ emoji: "✨", count: 4, reacted: false }],
     },
     {
@@ -137,6 +164,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня в 12:12",
       content: "Предлагаю сразу сделать красивые системные сообщения, когда кто-то заходит в логово.",
       color: "text-emerald-400",
+      role: "Хранитель Знаний",
     },
   ],
   "1": [
@@ -157,6 +185,8 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня",
       content: "Кидайте сюда любые идеи по развитию проекта. Я читаю всё.",
       color: "text-wyvern-400",
+      role: "Хранитель Пламени",
+      isOwn: true,
     },
   ],
   "c1": [
@@ -167,6 +197,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня",
       content: "Крылья готовы к полёту! Кто со мной в рейд?",
       color: "text-orange-400",
+      role: "Крылатый Разведчик",
       reactions: [{ emoji: "🔥", count: 5, reacted: false }],
     },
   ],
@@ -178,6 +209,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня",
       content: "Сегодня добавили реакции и переключение серверов. Красота!",
       color: "text-emerald-400",
+      role: "Хранитель Знаний",
       reactions: [{ emoji: "💻", count: 2, reacted: true }],
     },
   ],
@@ -188,6 +220,7 @@ export default function AppPage() {
   const [activeChannelId, setActiveChannelId] = useState("3");
   const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
   const activeChannel =
@@ -209,7 +242,6 @@ export default function AppPage() {
     if (!server) return;
 
     setActiveServerId(serverId);
-    // Переключаемся на первый текстовый канал нового сервера
     const firstText = server.channels.find((c) => c.type === "text") || server.channels[0];
     setActiveChannelId(firstText.id);
     addToast(`Перешли в логово «${server.name}»`, "success");
@@ -217,6 +249,7 @@ export default function AppPage() {
 
   const handleSelectChannel = (channelId: string) => {
     setActiveChannelId(channelId);
+    setIsTyping(false);
   };
 
   const handleSendMessage = (content: string) => {
@@ -229,6 +262,8 @@ export default function AppPage() {
       time: "Сейчас",
       content: content.trim(),
       color: "text-wyvern-400",
+      role: "Хранитель Пламени",
+      isOwn: true,
       reactions: [],
     };
 
@@ -237,7 +272,36 @@ export default function AppPage() {
       [activeChannelId]: [...(prev[activeChannelId] || []), newMessage],
     }));
 
+    setIsTyping(false);
     addToast("Сообщение отправлено", "success");
+  };
+
+  const handleEditMessage = (messageId: string, newContent: string) => {
+    setMessagesByChannel((prev) => {
+      const channelMessages = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: channelMessages.map((msg) =>
+          msg.id === messageId && msg.isOwn
+            ? { ...msg, content: newContent, edited: true }
+            : msg
+        ),
+      };
+    });
+    addToast("Сообщение изменено", "success");
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setMessagesByChannel((prev) => {
+      const channelMessages = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: channelMessages.filter(
+          (msg) => !(msg.id === messageId && msg.isOwn)
+        ),
+      };
+    });
+    addToast("Сообщение удалено", "info");
   };
 
   const handleToggleReaction = (messageId: string, emoji: string) => {
@@ -251,7 +315,6 @@ export default function AppPage() {
 
         if (existing) {
           if (existing.reacted) {
-            // убрать свою реакцию
             existing.count -= 1;
             existing.reacted = false;
             if (existing.count <= 0) {
@@ -275,6 +338,10 @@ export default function AppPage() {
     });
   };
 
+  const handleTyping = (typing: boolean) => {
+    setIsTyping(typing);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-scale-900 text-zinc-100 relative">
       <ServerSidebar
@@ -294,12 +361,16 @@ export default function AppPage() {
         <ChatArea
           channel={activeChannel}
           messages={messages}
+          isTyping={isTyping}
           onSendMessage={handleSendMessage}
           onToggleReaction={handleToggleReaction}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={handleDeleteMessage}
+          onTyping={handleTyping}
         />
       </div>
 
-      <MemberList />
+      <MemberList members={members} />
 
       <ToastContainer toasts={toasts} />
     </div>
