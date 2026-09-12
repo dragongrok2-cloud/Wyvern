@@ -1,34 +1,32 @@
 "use client";
 
 import { Hash, Volume2, ChevronDown, Settings, Plus } from "lucide-react";
+import type { Channel } from "@/app/app/page";
+
+type Props = {
+  channels: Channel[];
+  activeChannelId: string;
+  onSelectChannel: (id: string) => void;
+};
 
 const categories = [
   {
     name: "Информация",
-    channels: [
-      { id: "1", name: "добро-пожаловать", type: "text" as const },
-      { id: "2", name: "правила-логова", type: "text" as const },
-    ],
+    channelIds: ["1", "2"],
   },
   {
     name: "Общение",
-    channels: [
-      { id: "3", name: "общий-чат", type: "text" as const, active: true },
-      { id: "4", name: "мемы-и-огонь", type: "text" as const },
-      { id: "5", name: "голос-драконов", type: "voice" as const },
-      { id: "6", name: "рейд-на-боссов", type: "voice" as const },
-    ],
+    channelIds: ["3", "4", "5", "6"],
   },
   {
     name: "Творчество",
-    channels: [
-      { id: "7", name: "скриншоты", type: "text" as const },
-      { id: "8", name: "идеи-для-wyvern", type: "text" as const },
-    ],
+    channelIds: ["7", "8"],
   },
 ];
 
-export function ChannelSidebar() {
+export function ChannelSidebar({ channels, activeChannelId, onSelectChannel }: Props) {
+  const getChannel = (id: string) => channels.find((c) => c.id === id);
+
   return (
     <div className="w-60 flex flex-col bg-scale-800 border-r border-zinc-800/60">
       {/* Заголовок сервера */}
@@ -50,23 +48,31 @@ export function ChannelSidebar() {
             </div>
 
             <div className="space-y-0.5">
-              {category.channels.map((channel) => (
-                <button
-                  key={channel.id}
-                  className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[15px] transition-colors ${
-                    channel.active
-                      ? "bg-scale-700/80 text-white"
-                      : "text-zinc-400 hover:bg-scale-700/40 hover:text-zinc-200"
-                  }`}
-                >
-                  {channel.type === "text" ? (
-                    <Hash className="w-4 h-4 flex-shrink-0 text-zinc-500" />
-                  ) : (
-                    <Volume2 className="w-4 h-4 flex-shrink-0 text-zinc-500" />
-                  )}
-                  <span className="truncate">{channel.name}</span>
-                </button>
-              ))}
+              {category.channelIds.map((id) => {
+                const channel = getChannel(id);
+                if (!channel) return null;
+
+                const isActive = channel.id === activeChannelId;
+
+                return (
+                  <button
+                    key={channel.id}
+                    onClick={() => onSelectChannel(channel.id)}
+                    className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[15px] transition-colors ${
+                      isActive
+                        ? "bg-scale-700/80 text-white"
+                        : "text-zinc-400 hover:bg-scale-700/40 hover:text-zinc-200"
+                    }`}
+                  >
+                    {channel.type === "text" ? (
+                      <Hash className="w-4 h-4 flex-shrink-0 text-zinc-500" />
+                    ) : (
+                      <Volume2 className="w-4 h-4 flex-shrink-0 text-zinc-500" />
+                    )}
+                    <span className="truncate">{channel.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
