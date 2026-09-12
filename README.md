@@ -5,66 +5,115 @@
 > Discord почти назвали Wyvern.  
 > Мы решили не упускать эту возможность.
 
-Wyvern — современная платформа для голосового и текстового общения с драконьей душой.
+---
+
+## ✨ Что уже есть
+
+| Функция | Статус |
+|---------|--------|
+| UI логова / каналов / чата | ✅ |
+| Real-time (Socket.io) | ✅ |
+| Реакции, ответы, пины | ✅ |
+| Редактирование / удаление | ✅ |
+| Роли с цветами | ✅ |
+| **База данных (Prisma + SQLite)** | ✅ |
+| **Авторизация (NextAuth)** | ✅ |
+| **Голосовые каналы (LiveKit)** | ✅ каркас |
+| Потоки (Threads) | 🟡 схема готова |
 
 ---
 
-## ✨ Что уже работает
-
-- Красивый тёмный UI с огненными акцентами
-- Несколько логова (серверов) с переключением
-- Текстовые и голосовые каналы
-- **Настоящий real-time** через Socket.io
-- Сообщения, ответы, реакции
-- Редактирование и удаление своих сообщений
-- Закреплённые сообщения
-- Роли с цветами
-- Индикатор «печатает...»
-- Красивые toast-уведомления
-
----
-
-## 🛠 Tech Stack
-
-| Layer          | Technology                          |
-|----------------|-------------------------------------|
-| Frontend       | Next.js 15 + TypeScript + Tailwind  |
-| Real-time      | **Socket.io**                       |
-| Server         | Custom Node.js server (`server.ts`) |
-| Voice (soon)   | LiveKit                             |
-
----
-
-## 🚀 Запуск
+## 🚀 Быстрый старт
 
 ```bash
 git clone https://github.com/dragongrok2-cloud/Wyvern.git
 cd Wyvern
+cp .env.example .env
 npm install
+npx prisma db push
+npm run db:seed
 npm run dev
 ```
 
-Открой http://localhost:3000 → нажми **«Войти в Логово»**
+Открой http://localhost:3000
 
-### Как проверить real-time
+### Демо-аккаунты
 
-1. Открой два окна браузера (или обычное + инкогнито)
-2. Зайди в один и тот же канал
-3. Напиши сообщение в одном — оно мгновенно появится во втором
-4. Поставь реакцию, отредактируй, закрепи — всё синхронизируется
+| Email | Пароль | Имя |
+|-------|--------|-----|
+| dragon@wyvern.app | dragon123 | Добрый Дракон |
+| fire@wyvern.app | dragon123 | Огненная Чешуя |
+| night@wyvern.app | dragon123 | Ночной Страж |
+| code@wyvern.app | dragon123 | Кодекс Чешуи |
 
-Зелёная точка рядом с названием канала = Socket.io подключён.
+---
+
+## 🗄 База данных
+
+Используется **Prisma + SQLite** (файл `prisma/dev.db`).
+
+```bash
+npx prisma db push     # применить схему
+npm run db:seed        # заполнить демо-данными
+npm run db:studio      # открыть GUI
+```
+
+Модели: User, Server, Channel, Message, Thread, Reaction, ServerMember.
+
+Для продакшена замени `DATABASE_URL` на PostgreSQL.
+
+---
+
+## 🔐 Авторизация
+
+- NextAuth.js (Credentials)
+- Регистрация: `/login` → «Зарегистрироваться»
+- Сессии через JWT
+- После логина → `/app`
+
+---
+
+## 🎤 Голосовые каналы (LiveKit)
+
+1. Создай бесплатный проект на [cloud.livekit.io](https://cloud.livekit.io)
+2. Добавь в `.env`:
+
+```env
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
+LIVEKIT_URL=wss://your-project.livekit.cloud
+NEXT_PUBLIC_LIVEKIT_URL=wss://your-project.livekit.cloud
+```
+
+3. Зайди в любой голосовой канал и нажми **«Присоединиться к голосу»**
+
+Компонент: `src/components/server/VoiceChannel.tsx`
+
+---
+
+## 🧵 Потоки (Threads)
+
+Схема Prisma уже поддерживает Thread + связь Message ↔ Thread.  
+UI потоков — следующий шаг (кнопка «Создать ветку» на сообщении).
 
 ---
 
 ## 📁 Структура
 
 ```
-server.ts          — Next.js + Socket.io сервер
+server.ts                 — Next.js + Socket.io
+prisma/schema.prisma      — полная схема БД
+prisma/seed.ts            — демо-данные
 src/
-  app/app/         — главная страница интерфейса
-  components/      — UI компоненты
-  lib/socket.ts    — клиент Socket.io
+  app/
+    login/                — вход / регистрация
+    api/auth/             — NextAuth + register
+    api/livekit/token/    — токены для голоса
+  components/server/      — UI логова
+  lib/
+    prisma.ts
+    auth.ts
+    socket.ts
 ```
 
 ---
