@@ -3,7 +3,6 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute inset-0 bg-gradient-to-br from-wyvern-950/40 via-scale-900 to-scale-900" />
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-wyvern-500/10 rounded-full blur-3xl" />
 
@@ -27,31 +26,34 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/app"
+            href="/login"
             className="px-8 py-3.5 rounded-xl bg-wyvern-500 hover:bg-wyvern-600 text-white font-semibold transition-all shadow-lg shadow-wyvern-500/25 hover:shadow-wyvern-500/40"
           >
             Войти в Логово
           </Link>
-          <button className="px-8 py-3.5 rounded-xl bg-scale-800 hover:bg-scale-700 border border-zinc-700 text-zinc-200 font-medium transition-all">
-            Узнать больше
-          </button>
+          <Link
+            href="/app"
+            className="px-8 py-3.5 rounded-xl bg-scale-800 hover:bg-scale-700 border border-zinc-700 text-zinc-200 font-medium transition-all"
+          >
+            Попробовать без входа
+          </Link>
         </div>
 
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
           <Feature
             emoji="🔥"
             title="Голос с огнём"
-            description="Низкая задержка, кристально чистый звук и драконьи эффекты"
+            description="Настоящие голосовые каналы на LiveKit с низкой задержкой"
           />
           <Feature
             emoji="🏰"
             title="Логова"
-            description="Серверы с ролями, каналами и настоящей атмосферой клана"
+            description="Серверы с ролями, каналами, потоками и атмосферой клана"
           />
           <Feature
             emoji="✨"
-            title="Красота"
-            description="Тёмный UI, огненные акценты и внимание к деталям"
+            title="Real-time"
+            description="Socket.io + база данных + авторизация из коробки"
           />
         </div>
       </div>
