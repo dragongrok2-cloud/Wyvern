@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash, Volume2, ChevronDown, Settings, Plus } from "lucide-react";
+import { Hash, Volume2, ChevronDown, Settings, Plus, LogOut } from "lucide-react";
 import type { Channel } from "@/app/app/page";
 
 type Props = {
@@ -8,6 +8,8 @@ type Props = {
   channels: Channel[];
   activeChannelId: string;
   onSelectChannel: (id: string) => void;
+  onSignOut?: () => void;
+  userName?: string;
 };
 
 export function ChannelSidebar({
@@ -15,19 +17,19 @@ export function ChannelSidebar({
   channels,
   activeChannelId,
   onSelectChannel,
+  onSignOut,
+  userName = "Дракон",
 }: Props) {
   const textChannels = channels.filter((c) => c.type === "text");
   const voiceChannels = channels.filter((c) => c.type === "voice");
 
   return (
     <div className="w-60 flex flex-col bg-scale-800 border-r border-zinc-800/60">
-      {/* Заголовок сервера */}
       <button className="h-12 px-4 flex items-center justify-between border-b border-zinc-800/80 hover:bg-scale-700/50 transition-colors shadow-sm">
         <span className="font-semibold text-[15px] truncate">{serverName}</span>
         <ChevronDown className="w-4 h-4 text-zinc-400" />
       </button>
 
-      {/* Список каналов */}
       <div className="flex-1 overflow-y-auto pt-3 pb-4 px-2 space-y-4">
         {textChannels.length > 0 && (
           <div>
@@ -38,7 +40,6 @@ export function ChannelSidebar({
               </button>
               <Plus className="w-3.5 h-3.5 text-zinc-500 opacity-0 group-hover:opacity-100 cursor-pointer hover:text-zinc-300" />
             </div>
-
             <div className="space-y-0.5">
               {textChannels.map((channel) => {
                 const isActive = channel.id === activeChannelId;
@@ -70,7 +71,6 @@ export function ChannelSidebar({
               </button>
               <Plus className="w-3.5 h-3.5 text-zinc-500 opacity-0 group-hover:opacity-100 cursor-pointer hover:text-zinc-300" />
             </div>
-
             <div className="space-y-0.5">
               {voiceChannels.map((channel) => {
                 const isActive = channel.id === activeChannelId;
@@ -94,15 +94,23 @@ export function ChannelSidebar({
         )}
       </div>
 
-      {/* Панель пользователя внизу */}
       <div className="h-[52px] bg-scale-900/80 px-2 flex items-center gap-2 border-t border-zinc-800/50">
         <div className="w-8 h-8 rounded-full bg-wyvern-600 flex items-center justify-center text-sm">
           🐉
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate leading-tight">Добрый Дракон</div>
+          <div className="text-sm font-medium truncate leading-tight">{userName}</div>
           <div className="text-xs text-zinc-400 truncate">В сети</div>
         </div>
+        {onSignOut && (
+          <button
+            onClick={onSignOut}
+            className="p-1.5 rounded hover:bg-scale-700 text-zinc-400 hover:text-red-400"
+            title="Выйти"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        )}
         <button className="p-1.5 rounded hover:bg-scale-700 text-zinc-400 hover:text-zinc-200">
           <Settings className="w-4 h-4" />
         </button>
