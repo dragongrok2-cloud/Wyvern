@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String?
+  image         String?   // avatar emoji or url
+  role          String    @default("Наездник")
+  roleColor     String    @default("text-zinc-300")
+  status        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages      Message[]
+  reactions     Reaction[]
+  memberships   ServerMember[]
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Server {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String   // emoji
+  color       String   @default("bg-wyvern-600")
+  createdAt   DateTime @default(now())
+
+  channels    Channel[]
+  members     ServerMember[]
+}
+
+model ServerMember {
+  id        String @id @default(cuid())
+  userId    String
+  serverId  String
+  nickname  String?
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server    Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+}
+
+model Channel {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // "text" | "voice"
+  topic     String?
+  position  Int      @default(0)
+  serverId  String
+  createdAt DateTime @default(now())
+
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  threads   Thread[]
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  channelId   String
+  authorId    String
+  threadId    String?  // if this message belongs to a thread
+  replyToId   String?  // reply to another message
+  pinned      Boolean  @default(false)
+  edited      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  thread      Thread?   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  replyTo     Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     Message[] @relation("MessageReplies")
+  reactions   Reaction[]
+
+  // Message that started a thread
+  startedThread Thread?
+}
+
+model Thread {
+  id              String   @id @default(cuid())
+  name            String?
+  channelId       String
+  starterMessageId String  @unique
+  createdAt       DateTime @default(now())
+  archived        Boolean  @default(false)
+
+  channel         Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  starterMessage  Message  @relation(fields: [starterMessageId], references: [id], onDelete: Cascade)
+  messages        Message[]
+}
+
+model Reaction {
+  id        String @id @default(cuid())
+  emoji     String
+  messageId String
+  userId    String
+
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+}
