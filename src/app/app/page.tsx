@@ -20,17 +20,25 @@ export type Reaction = {
   reacted: boolean;
 };
 
+export type ReplyRef = {
+  id: string;
+  author: string;
+  content: string;
+};
+
 export type Message = {
   id: string;
   author: string;
   avatar: string;
   time: string;
   content: string;
-  color: string; // role color
+  color: string;
   role?: string;
   reactions?: Reaction[];
   isOwn?: boolean;
   edited?: boolean;
+  pinned?: boolean;
+  replyTo?: ReplyRef;
 };
 
 export type Server = {
@@ -122,6 +130,7 @@ const initialMessages: Record<string, Message[]> = {
       color: "text-wyvern-400",
       role: "Хранитель Пламени",
       isOwn: true,
+      pinned: true,
       reactions: [
         { emoji: "🔥", count: 3, reacted: false },
         { emoji: "🐉", count: 2, reacted: true },
@@ -156,6 +165,11 @@ const initialMessages: Record<string, Message[]> = {
       role: "Хранитель Пламени",
       isOwn: true,
       reactions: [{ emoji: "✨", count: 4, reacted: false }],
+      replyTo: {
+        id: "3",
+        author: "Ночной Страж",
+        content: "Голосовые каналы будут с настоящим эхом пещер? 😏",
+      },
     },
     {
       id: "5",
@@ -175,6 +189,7 @@ const initialMessages: Record<string, Message[]> = {
       time: "Сегодня",
       content: "Добро пожаловать в Главное Логово Wyvern! Здесь собираются драконы и их наездники.",
       color: "text-zinc-400",
+      pinned: true,
     },
   ],
   "8": [
@@ -221,12 +236,14 @@ export default function AppPage() {
   const [messagesByChannel, setMessagesByChannel] = useState(initialMessages);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ReplyRef | null>(null);
 
   const activeServer = servers.find((s) => s.id === activeServerId) || servers[0];
   const activeChannel =
     activeServer.channels.find((c) => c.id === activeChannelId) ||
     activeServer.channels[0];
   const messages = messagesByChannel[activeChannelId] || [];
+  const pinnedMessages = messages.filter((m) => m.pinned);
 
   const addToast = useCallback((message: string, type: Toast["type"] = "info") => {
     const id = Date.now().toString();
@@ -244,12 +261,14 @@ export default function AppPage() {
     setActiveServerId(serverId);
     const firstText = server.channels.find((c) => c.type === "text") || server.channels[0];
     setActiveChannelId(firstText.id);
+    setReplyingTo(null);
     addToast(`Перешли в логово «${server.name}»`, "success");
   };
 
   const handleSelectChannel = (channelId: string) => {
     setActiveChannelId(channelId);
     setIsTyping(false);
+    setReplyingTo(null);
   };
 
   const handleSendMessage = (content: string) => {
@@ -265,6 +284,7 @@ export default function AppPage() {
       role: "Хранитель Пламени",
       isOwn: true,
       reactions: [],
+      replyTo: replyingTo || undefined,
     };
 
     setMessagesByChannel((prev) => ({
@@ -273,6 +293,7 @@ export default function AppPage() {
     }));
 
     setIsTyping(false);
+    setReplyingTo(null);
     addToast("Сообщение отправлено", "success");
   };
 
@@ -302,6 +323,25 @@ export default function AppPage() {
       };
     });
     addToast("Сообщение удалено", "info");
+  };
+
+  const handleTogglePin = (messageId: string) => {
+    setMessagesByChannel((prev) => {
+      const channelMessages = prev[activeChannelId] || [];
+      return {
+        ...prev,
+        [activeChannelId]: channelMessages.map((msg) =>
+          msg.id === messageId ? { ...msg, pinned: !msg.pinned } : msg
+        ),
+      };
+    });
+
+    const msg = messages.find((m) => m.id === messageId);
+    if (msg?.pinned) {
+      addToast("Сообщение откреплено", "info");
+    } else {
+      addToast("Сообщение закреплено", "success");
+    }
   };
 
   const handleToggleReaction = (messageId: string, emoji: string) => {
@@ -342,6 +382,18 @@ export default function AppPage() {
     setIsTyping(typing);
   };
 
+  const handleStartReply = (msg: Message) => {
+    setReplyingTo({
+      id: msg.id,
+      author: msg.author,
+      content: msg.content,
+    });
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-scale-900 text-zinc-100 relative">
       <ServerSidebar
@@ -361,11 +413,16 @@ export default function AppPage() {
         <ChatArea
           channel={activeChannel}
           messages={messages}
+          pinnedMessages={pinnedMessages}
           isTyping={isTyping}
+          replyingTo={replyingTo}
           onSendMessage={handleSendMessage}
           onToggleReaction={handleToggleReaction}
           onEditMessage={handleEditMessage}
           onDeleteMessage={handleDeleteMessage}
+          onTogglePin={handleTogglePin}
+          onStartReply={handleStartReply}
+          onCancelReply={handleCancelReply}
           onTyping={handleTyping}
         />
       </div>
