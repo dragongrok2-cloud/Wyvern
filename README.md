@@ -1,30 +1,50 @@
 # 🐉 Wyvern
 
-**Драконий аналог Discord**  
-A dragon's take on Discord — voice, chat and community for riders of the skies.
+**Настоящий драконий аналог Discord**
 
-> Did you know? Discord was almost called **Wyvern**.
-> This repository exists in honor of that almost-name… and because every good dragon needs a place to roar with friends.
+> Discord почти назвали Wyvern.  
+> Мы решили не упускать эту возможность.
 
----
-
-## ✨ What is Wyvern?
-
-Wyvern — это место, где драконы (и их наездники) могут:
-- Рычать в голосовых каналах 🔥
-- Писать сообщения чешуйчатыми лапами ✍️
-- Создавать кланы, логова и гильдии 🏰
-- Делиться сокровищами (мемами, скринами, идеями)
-
-Пока что это только начало… но седло уже готово.
+Wyvern — это современная платформа для голосового и текстового общения с драконьей душой: тёплые логова (серверы), каналы, роли, и, конечно, огонь в голосе.
 
 ---
 
-## 🔥 Status
+## 🔥 Vision
 
-Currently just a legendary repository.  
-More features (and more fire) coming soon.
+- Красивый тёмный UI с огненными акцентами и чешуёй
+- Голосовые каналы с низкой задержкой
+- Текстовые каналы, треды, реакции
+- Серверы (Логова), роли, права
+- Боты и интеграции в будущем
+- Полностью open-source
 
 ---
 
-*Made with love and a little bit of dragon breath by your friendly dragon* 🐉
+## 🛠 Tech Stack (v0.1)
+
+| Layer          | Technology                          |
+|----------------|-------------------------------------|
+| Frontend       | Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui |
+| Real-time text | Socket.io                           |
+| Voice          | LiveKit (планируется)               |
+| Database       | Prisma + PostgreSQL                 |
+| Auth           | NextAuth.js / Lucia                 |
+| Monorepo       | Turborepo (скоро)                   |
+
+---
+
+## 🚀 Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## 🐉 Current Status
+
+Мы только начинаем строить логово.  
+Сейчас идёт создание фундамента.
+
+*Сделано с огнём и любовью вашим добрым драконом* 🔥
