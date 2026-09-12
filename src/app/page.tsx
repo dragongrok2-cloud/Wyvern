@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
@@ -24,9 +26,12 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="px-8 py-3.5 rounded-xl bg-wyvern-500 hover:bg-wyvern-600 text-white font-semibold transition-all shadow-lg shadow-wyvern-500/25 hover:shadow-wyvern-500/40">
+          <Link
+            href="/app"
+            className="px-8 py-3.5 rounded-xl bg-wyvern-500 hover:bg-wyvern-600 text-white font-semibold transition-all shadow-lg shadow-wyvern-500/25 hover:shadow-wyvern-500/40"
+          >
             Войти в Логово
-          </button>
+          </Link>
           <button className="px-8 py-3.5 rounded-xl bg-scale-800 hover:bg-scale-700 border border-zinc-700 text-zinc-200 font-medium transition-all">
             Узнать больше
           </button>
