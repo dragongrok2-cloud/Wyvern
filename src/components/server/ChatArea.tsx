@@ -28,7 +28,9 @@ type Props = {
   messages: Message[];
   pinnedMessages: Message[];
   isTyping: boolean;
+  typingUser?: string | null;
   replyingTo: ReplyRef | null;
+  socketConnected?: boolean;
   onSendMessage: (content: string) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onEditMessage: (messageId: string, newContent: string) => void;
@@ -46,7 +48,9 @@ export function ChatArea({
   messages,
   pinnedMessages,
   isTyping,
+  typingUser,
   replyingTo,
+  socketConnected = false,
   onSendMessage,
   onToggleReaction,
   onEditMessage,
@@ -113,6 +117,7 @@ export function ChatArea({
   };
 
   const isVoice = channel.type === "voice";
+  const displayTypingName = typingUser || "Добрый Дракон";
 
   return (
     <div className="flex flex-col h-full bg-scale-800/40">
@@ -131,6 +136,13 @@ export function ChatArea({
               <span className="text-sm text-zinc-400 truncate hidden sm:inline">{channel.topic}</span>
             </>
           )}
+          {/* Real-time status */}
+          <div
+            className={`ml-2 w-2 h-2 rounded-full ${
+              socketConnected ? "bg-emerald-400" : "bg-zinc-600"
+            }`}
+            title={socketConnected ? "Real-time подключён" : "Нет соединения"}
+          />
         </div>
 
         <div className="flex items-center gap-3 text-zinc-400 flex-shrink-0">
@@ -229,7 +241,6 @@ export function ChatArea({
                     {msg.avatar}
                   </div>
                   <div className="min-w-0 flex-1">
-                    {/* Reply quote */}
                     {msg.replyTo && (
                       <div className="flex items-center gap-1.5 mb-1 text-xs text-zinc-400">
                         <Reply className="w-3 h-3" />
@@ -277,7 +288,6 @@ export function ChatArea({
                       <p className="text-zinc-200 leading-relaxed">{msg.content}</p>
                     )}
 
-                    {/* Reactions + actions */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       {msg.reactions?.map((r) => (
                         <button
@@ -320,7 +330,6 @@ export function ChatArea({
                         )}
                       </div>
 
-                      {/* Actions */}
                       <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 ml-1 transition-opacity">
                         <button
                           onClick={() => onStartReply(msg)}
@@ -367,7 +376,7 @@ export function ChatArea({
                     <span className="w-1.5 h-1.5 bg-wyvern-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 bg-wyvern-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span>Добрый Дракон печатает...</span>
+                  <span>{displayTypingName} печатает...</span>
                 </div>
               )}
 
