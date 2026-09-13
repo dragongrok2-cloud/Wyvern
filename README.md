@@ -21,6 +21,10 @@
 | **Голосовые каналы (LiveKit)** | ✅ каркас |
 | Потоки (Threads) | 🟡 схема готова |
 
+Что дальше — см. [ROADMAP.md](./ROADMAP.md).  
+Как помочь — [CONTRIBUTING.md](./CONTRIBUTING.md).  
+Лицензия — [MIT](./LICENSE).
+
 ---
 
 ## 🚀 Быстрый старт
@@ -48,7 +52,7 @@ npm run dev
 
 ---
 
-## 🗄 База данных
+## 🗂 База данных
 
 Используется **Prisma + SQLite** (файл `prisma/dev.db`).
 
