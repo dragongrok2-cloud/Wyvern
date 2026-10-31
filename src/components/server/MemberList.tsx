@@ -1,14 +1,75 @@
 "use client";
 
+import { useState } from "react";
 import type { Member } from "@/app/app/page";
+import {
+  type PresenceStatus,
+  PRESENCE_LABELS,
+  PRESENCE_DOT,
+  nextPresence,
+} from "@/lib/presence";
 
 type Props = {
   members: Member[];
 };
 
+function toPresence(member: Member): PresenceStatus {
+  if (!member.online) return "offline";
+  const s = (member.status || "").toLowerCase();
+  if (s.includes("лет") || s.includes("fly")) return "flying";
+  if (s.includes("не беспоко") || s.includes("dnd") || s.includes("do not")) return "dnd";
+  return "online";
+}
+
 export function MemberList({ members }: Props) {
-  const online = members.filter((m) => m.online);
-  const offline = members.filter((m) => !m.online);
+  const [localMembers, setLocalMembers] = useState(() =>
+    members.map((m) => ({
+      ...m,
+      presence: toPresence(m),
+    }))
+  );
+
+  const cycle = (name: string) => {
+    setLocalMembers((prev) =>
+      prev.map((m) =>
+        m.name === name
+          ? { ...m, presence: nextPresence(m.presence), online: nextPresence(m.presence) !== "offline" }
+          : m
+      )
+    );
+  };
+
+  const online = localMembers.filter((m) => m.presence !== "offline");
+  const offline = localMembers.filter((m) => m.presence === "offline");
+
+  const renderMember = (member: (typeof localMembers)[number], isOffline = false) => (
+    <div
+      key={member.name}
+      className={`flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-scale-700/50 cursor-pointer group ${
+        isOffline ? "opacity-60 hover:opacity-100 transition-opacity" : ""
+      }`}
+      onClick={() => cycle(member.name)}
+      title="Нажми, чтобы сменить статус присутствия"
+    >
+      <div className="relative">
+        <div className="w-8 h-8 rounded-full bg-scale-700 flex items-center justify-center text-sm">
+          {member.avatar}
+        </div>
+        <div
+          className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2.5px] border-scale-800 ${PRESENCE_DOT[member.presence]}`}
+        />
+      </div>
+      <div className="min-w-0">
+        <div className={`text-sm font-medium truncate ${isOffline ? "text-zinc-400" : member.roleColor}`}>
+          {member.name}
+        </div>
+        <div className="text-[11px] text-zinc-500 truncate">
+          {member.role}
+          {" · "}{PRESENCE_LABELS[member.presence]}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-60 bg-scale-800 border-l border-zinc-800/60 hidden xl:flex flex-col">
@@ -18,56 +79,18 @@ export function MemberList({ members }: Props) {
           <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">
             В сети — {online.length}
           </h3>
-          <div className="space-y-1">
-            {online.map((member) => (
-              <div
-                key={member.name}
-                className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-scale-700/50 cursor-pointer group"
-              >
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-scale-700 flex items-center justify-center text-sm">
-                    {member.avatar}
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-[2.5px] border-scale-800" />
-                </div>
-                <div className="min-w-0">
-                  <div className={`text-sm font-medium truncate ${member.roleColor}`}>
-                    {member.name}
-                  </div>
-                  <div className="text-[11px] text-zinc-500 truncate">
-                    {member.role}
-                    {member.status ? ` · ${member.status}` : ""}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="space-y-1">{online.map((m) => renderMember(m))}</div>
         </div>
 
         {/* Оффлайн */}
-        <div>
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">
-            Не в сети — {offline.length}
-          </h3>
-          <div className="space-y-1">
-            {offline.map((member) => (
-              <div
-                key={member.name}
-                className="flex items-center gap-3 px-2 py-1.5 rounded-md hover:bg-scale-700/50 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-              >
-                <div className="w-8 h-8 rounded-full bg-scale-700 flex items-center justify-center text-sm">
-                  {member.avatar}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate text-zinc-400">
-                    {member.name}
-                  </div>
-                  <div className="text-[11px] text-zinc-500 truncate">{member.role}</div>
-                </div>
-              </div>
-            ))}
+        {offline.length > 0 && (
+          <div>
+            <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">
+              Не в сети — {offline.length}
+            </h3>
+            <div className="space-y-1">{offline.map((m) => renderMember(m, true))}</div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
