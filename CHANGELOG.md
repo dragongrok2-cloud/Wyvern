@@ -7,12 +7,13 @@ The format follows Keep a Changelog, dates in UTC.
 
 ### Added
 - `src/lib/presence.ts` — statuses for riders: online, flying, do-not-disturb, offline.
+- Presence UI in the member list: colored dots next to avatars and click to cycle status (online → flying → dnd → offline).
 - This changelog so the nest remembers every wingbeat.
 
 ### Planned
-- Presence UI in the member list.
 - Invite links with expiry.
 - Message attachments.
+- Realtime presence sync via socket.io.
 
 ## [0.1.0] — 2026-09-13
 
