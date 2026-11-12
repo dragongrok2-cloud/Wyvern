@@ -96,6 +96,11 @@ app.prepare().then(() => {
       });
     });
 
+    // Статус присутствия — рассылаем всем
+    socket.on("presence:update", (data: { name: string; presence: string }) => {
+      socket.broadcast.emit("presence:update", data);
+    });
+
     socket.on("disconnect", () => {
       console.log(`🐉 Client disconnected: ${socket.id}`);
       for (const [room, sockets] of rooms.entries()) {

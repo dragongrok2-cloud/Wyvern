@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Member } from "@/app/app/page";
 import {
   type PresenceStatus,
@@ -8,6 +8,7 @@ import {
   PRESENCE_DOT,
   nextPresence,
 } from "@/lib/presence";
+import { getSocket } from "@/lib/socket";
 
 type Props = {
   members: Member[];
@@ -29,14 +30,44 @@ export function MemberList({ members }: Props) {
     }))
   );
 
+  useEffect(() => {
+    const socket = getSocket();
+
+    const onPresence = (data: { name: string; presence: PresenceStatus }) => {
+      setLocalMembers((prev) =>
+        prev.map((m) =>
+          m.name === data.name
+            ? { ...m, presence: data.presence, online: data.presence !== "offline" }
+            : m
+        )
+      );
+    };
+
+    socket.on("presence:update", onPresence);
+
+    return () => {
+      socket.off("presence:update", onPresence);
+    };
+  }, []);
+
   const cycle = (name: string) => {
-    setLocalMembers((prev) =>
-      prev.map((m) =>
-        m.name === name
-          ? { ...m, presence: nextPresence(m.presence), online: nextPresence(m.presence) !== "offline" }
-          : m
-      )
-    );
+    setLocalMembers((prev) => {
+      const next = prev.map((m) => {
+        if (m.name !== name) return m;
+        const presence = nextPresence(m.presence);
+        return { ...m, presence, online: presence !== "offline" };
+      });
+
+      const updated = next.find((m) => m.name === name);
+      if (updated) {
+        getSocket().emit("presence:update", {
+          name: updated.name,
+          presence: updated.presence,
+        });
+      }
+
+      return next;
+    });
   };
 
   const online = localMembers.filter((m) => m.presence !== "offline");
